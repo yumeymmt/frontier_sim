@@ -7,6 +7,10 @@
 #include <geometry_msgs/Point.h>
 
 #include <explore/costmap_tools.h>
+#include <explore/costmap_client.h>
+
+#include <iostream>
+#include <random>
 
 namespace frontier_exploration
 {
@@ -85,7 +89,7 @@ std::vector<Frontier> FrontierSearch::searchFrom(geometry_msgs::Point position)
 
   // set costs of frontiers
   for (auto& frontier : frontier_list) {
-    frontier.cost = frontierCost(frontier);
+    frontier.cost = frontierCost(frontier, position);
   }
   std::sort(
       frontier_list.begin(), frontier_list.end(),
@@ -108,7 +112,7 @@ Frontier FrontierSearch::buildNewFrontier(unsigned int initial_cell,
   // record initial contact point for frontier
   unsigned int ix, iy;
   costmap_->indexToCells(initial_cell, ix, iy);
-  costmap_->mapToWorld(ix, iy, output.initial.x, output.initial.y);
+  costmap_->mapToWorld(ix, iy, output.initial.x, output.initial.y);   // shows that frontier is in world coordinates 
 
   // push initial gridcell onto queue
   std::queue<unsigned int> bfs;
@@ -188,10 +192,99 @@ bool FrontierSearch::isNewFrontierCell(unsigned int idx,
   return false;
 }
 
-double FrontierSearch::frontierCost(const Frontier& frontier)
+// double FrontierSearch::frontierCost(const Frontier& frontier, geometry_msgs::Point pose)
+// {
+//   // calculate the distance between the frontier and the human 
+//   // modify the human location depending on the world according to URDF
+
+//   double human_x = -2.91756;
+//   double human_y = -5.26284;
+//   double frontier_x = frontier.middle.x;
+//   double frontier_y = frontier.middle.y;
+
+//   double frontier_human = sqrt(pow((double(human_x) - double(frontier_x)), 2.0) +
+//                                pow((double(human_y) - double(frontier_y)), 2.0));
+
+//   // ROS_INFO("frontier_human: %f", frontier_human);
+
+//   double robot_x = pose.x;
+//   double robot_y = pose.y;
+
+//   double robot_human = sqrt(pow((double(human_x) - double(robot_x)), 2.0) +
+//                                pow((double(human_y) - double(robot_y)), 2.0));
+
+//   if(robot_human < 3.0){
+//     ROS_INFO("robot location: %f, %f", pose.x, pose.y);
+//     ROS_INFO("robot_human: %f", robot_human);  
+//   }                           
+
+//   return (potential_scale_ * frontier.min_distance *
+//           costmap_->getResolution()) -
+//          (gain_scale_ * frontier.size * costmap_->getResolution());
+// }
+
+
+// this is the one with the sensor!!
+
+double FrontierSearch::frontierCost(const Frontier& frontier, geometry_msgs::Point pose)
 {
+  // calculate the distance between the frontier and the human 
+  // modify the human location depending on the world according to URDF
+
+  double human_x = -2.91756;
+  double human_y = -5.26284;
+  double frontier_x = frontier.middle.x;
+  double frontier_y = frontier.middle.y;
+  double robot_x = pose.x;
+  double robot_y = pose.y;
+  static double weight = 0;
+  static bool flag = 0; 
+  const double mean = 0.0;
+  const double std_dev = 0.2;
+
+
+  double frontier_human = sqrt(pow((double(human_x) - double(frontier_x)), 2.0) +
+                               pow((double(human_y) - double(frontier_y)), 2.0));
+
+  double robot_human = sqrt(pow((double(human_x) - double(robot_x)), 2.0) +
+                               pow((double(human_y) - double(robot_y)), 2.0));
+
+
+
+  if(robot_human < 3.0){
+    ROS_INFO("robot location: %f, %f", pose.x, pose.y);
+    ROS_INFO("robot_human: %f", robot_human);  
+    weight = 0;
+  }else if(robot_human < 6.0 && flag == 0){
+    weight = 3.0;
+    flag = 1;
+  }
+
+  // noise should be affecting the frontier_human readings 
+
+  // Seed the random number generator (use a different seed for each simulation run)
+  std::random_device rd;
+  std::mt19937 gen(rd());
+
+    // Generate Gaussian noise
+  std::normal_distribution<double> distribution(mean, std_dev);
+  double noise = distribution(gen);
+
+    // Add noise to the distance
+  frontier_human = frontier_human + noise;
+
+
   return (potential_scale_ * frontier.min_distance *
           costmap_->getResolution()) -
-         (gain_scale_ * frontier.size * costmap_->getResolution());
+         (gain_scale_ * frontier.size * costmap_->getResolution()) +
+         (weight * frontier_human * costmap_ -> getResolution());
 }
+
+// if human found, remove from cost
+// threshold (6m)
+// introduce noise 
+
+
+
+// how do i even justify this 
 }

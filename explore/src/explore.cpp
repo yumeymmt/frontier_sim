@@ -197,6 +197,26 @@ void Explore::makePlan()
     visualizeFrontiers(frontiers);
   }
 
+  
+  double human_x = -2.91756;
+  double human_y = -5.26284;
+  double robot_x = pose.position.x;
+  double robot_y = pose.position.y;
+
+  double robot_human = sqrt(pow((double(human_x) - double(robot_x)), 2.0) +
+                               pow((double(human_y) - double(robot_y)), 2.0));
+
+  if(robot_human < 3.0){
+    ROS_INFO("robot location: %f, %f", robot_x, robot_y);
+    ROS_INFO("robot_human: %f", robot_human);  
+  }                           
+
+
+  // geometry_msgs::Point person_position = search_.getPersonPosition();
+  // ROS_INFO("Person standing at x: %f, y: %f", FrontierSearch::X, FrontierSearch::Y);
+
+  // ROS_INFO("HELLO");
+
   // find non blacklisted frontier
   auto frontier =
       std::find_if_not(frontiers.begin(), frontiers.end(),

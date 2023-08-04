@@ -2,6 +2,8 @@
 #define FRONTIER_SEARCH_H_
 
 #include <costmap_2d/costmap_2d.h>
+#include <explore/costmap_client.h>
+
 
 namespace frontier_exploration
 {
@@ -75,7 +77,7 @@ protected:
    * @param frontier frontier for which compute the cost
    * @return cost of the frontier
    */
-  double frontierCost(const Frontier& frontier);
+  double frontierCost(const Frontier& frontier, geometry_msgs::Point pose);
 
 private:
   costmap_2d::Costmap2D* costmap_;
